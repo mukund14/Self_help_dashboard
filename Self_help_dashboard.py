@@ -3,24 +3,25 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# Function to fetch self-help articles from the web
-def fetch_self_help_articles():
-    query = "self-help"
-    url = f"https://www.google.com/search?q=query"
+# Function to fetch self-help articles from the web# Function to fetch self-help articles from Google search results
+def fetch_self_help_articles(query, num_pages=2):
+    articles = []
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    articles = []
-    for item in soup.find_all('div', class_='dbsr'):
-        title = item.find('div', class_='JheGif nDgy9d').text
-        link = item.find('a')['href']
-        snippet = item.find('div', class_='Y3v8qd').text
-        date_published = item.find('span', class_='WG9SHc').find('span').text
-        articles.append((title, link, snippet, date_published))
-    
+
+    for page in range(num_pages):
+        url = f"https://www.google.com/search?q={query}&tbm=nws&start={page * 10}"
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        for item in soup.find_all('div', class_='dbsr'):
+            title = item.find('div', class_='JheGif nDgy9d').text
+            link = item.find('a')['href']
+            snippet = item.find('div', class_='Y3v8qd').text
+            date_published = item.find('span', class_='WG9SHc').find('span').text
+            articles.append((title, link, snippet, date_published))
+
     return articles
 
 # Function to filter articles from the last 7 days
