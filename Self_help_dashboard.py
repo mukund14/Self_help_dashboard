@@ -5,9 +5,16 @@ from datetime import datetime, timedelta
 
 # Function to fetch self-help articles from an RSS feed (example)
 def fetch_self_help_articles():
-    feed_url = 'https://rss.selfhelpzone.com/'
+    feed_url = 'https://rss.selfhelpzone.com/'  # Replace with a valid self-help RSS feed URL
     feed = feedparser.parse(feed_url)
+    
+    if feed.bozo:
+        st.error("Failed to fetch articles. Please check the RSS feed URL.")
+        return []
+    
     articles = [(entry.title, entry.link, entry.published) for entry in feed.entries]
+    if not articles:
+        st.warning("No articles found in the RSS feed.")
     return articles
 
 # Function to filter articles from the last 7 days
@@ -29,6 +36,11 @@ def main():
 
     # Fetch self-help articles
     articles = fetch_self_help_articles()
+    
+    if not articles:
+        st.write("No articles available.")
+        return
+    
     last_7_days_articles = filter_last_7_days(articles)
 
     # Display data
