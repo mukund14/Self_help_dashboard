@@ -1,21 +1,23 @@
 import streamlit as st
 import requests
-import feedparser
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# Function to fetch self-help articles from an RSS feed (example)
+# Function to fetch self-help articles from a specific website (e.g., Tiny Buddha)
 def fetch_self_help_articles():
-    feed_url = 'https://rss.selfhelpzone.com/'  # Replace with a valid self-help RSS feed URL
-    feed = feedparser.parse(feed_url)
-    
-    if feed.bozo:
-        st.error("Failed to fetch articles. Please check the RSS feed URL.")
-        return []
-    
-    articles = [(entry.title, entry.link, entry.published) for entry in feed.entries]
-    if not articles:
-        st.warning("No articles found in the RSS feed.")
-    return articles
+    url = 'https://tinybuddha.com/blog/'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    articles = soup.find_all('article', class_='type-post')
+
+    article_list = []
+    for article in articles:
+        title = article.find('h2', class_='entry-title').text.strip()
+        link = article.find('h2', class_='entry-title').find('a')['href']
+        date_published = article.find('time', class_='entry-date').text.strip()
+        article_list.append((title, link, date_published))
+
+    return article_list
 
 # Function to filter articles from the last 7 days
 def filter_last_7_days(articles):
@@ -24,7 +26,7 @@ def filter_last_7_days(articles):
     filtered_articles = []
 
     for article in articles:
-        article_date = datetime.strptime(article[2], '%a, %d %b %Y %H:%M:%S %z')
+        article_date = datetime.strptime(article[2], '%B %d, %Y')
         if article_date.date() in [day.date() for day in last_7_days]:
             filtered_articles.append(article)
 
