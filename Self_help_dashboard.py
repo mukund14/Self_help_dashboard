@@ -3,21 +3,25 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# Function to fetch self-help articles from a specific website (e.g., Tiny Buddha)
+# Function to fetch self-help articles from the web
 def fetch_self_help_articles():
-    url = 'https://tinybuddha.com/blog/'
-    response = requests.get(url)
+    query = "self-help blog"
+    url = f"https://www.google.com/search?q={query}&tbm=nws"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.content, 'html.parser')
-    articles = soup.find_all('article', class_='type-post')
-
-    article_list = []
-    for article in articles:
-        title = article.find('h2', class_='entry-title').text.strip()
-        link = article.find('h2', class_='entry-title').find('a')['href']
-        date_published = article.find('time', class_='entry-date').text.strip()
-        article_list.append((title, link, date_published))
-
-    return article_list
+    
+    articles = []
+    for item in soup.find_all('div', class_='dbsr'):
+        title = item.find('div', class_='JheGif nDgy9d').text
+        link = item.find('a')['href']
+        snippet = item.find('div', class_='Y3v8qd').text
+        date_published = item.find('span', class_='WG9SHc').find('span').text
+        articles.append((title, link, snippet, date_published))
+    
+    return articles
 
 # Function to filter articles from the last 7 days
 def filter_last_7_days(articles):
@@ -26,7 +30,12 @@ def filter_last_7_days(articles):
     filtered_articles = []
 
     for article in articles:
-        article_date = datetime.strptime(article[2], '%B %d, %Y')
+        article_date_str = article[3]
+        try:
+            # Parse the date
+            article_date = datetime.strptime(article_date_str, '%b %d, %Y')
+        except ValueError:
+            continue
         if article_date.date() in [day.date() for day in last_7_days]:
             filtered_articles.append(article)
 
@@ -50,7 +59,8 @@ def main():
     for article in last_7_days_articles:
         st.write(f"### {article[0]}")
         st.write(f"[Read more]({article[1]})")
-        st.write(f"Published on: {article[2]}")
+        st.write(f"{article[2]}")
+        st.write(f"Published on: {article[3]}")
         st.write("---")
 
 if __name__ == '__main__':
