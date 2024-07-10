@@ -2,28 +2,35 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-import re
 
-# Function to fetch self-help articles from Google search results
-def fetch_self_help_articles(query, num_pages=2):
-    articles = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
+# Function to fetch motivational quotes
+def fetch_motivational_quotes():
+    url = 'https://www.brainyquote.com/topics/motivational-quotes'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    quotes = []
+    for quote in soup.find_all('a', class_='b-qt'):
+        text = quote.text.strip()
+        quotes.append(text)
+        
+    return quotes
 
-    for page in range(num_pages):
-        url = f"https://www.google.com/search?q={query}&tbm=nws&start={page * 10}"
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.content, 'html.parser')
+# Function to fetch self-help articles from a specific website (e.g., Tiny Buddha)
+def fetch_self_help_articles():
+    url = 'https://tinybuddha.com/blog/'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    articles = soup.find_all('article', class_='type-post')
 
-        for item in soup.find_all('div', class_='dbsr'):
-            title = item.find('div', class_='JheGif nDgy9d').text
-            link = item.find('a')['href']
-            snippet = item.find('div', class_='Y3v8qd').text
-            date_published = item.find('span', class_='WG9SHc').find('span').text
-            articles.append((title, link, snippet, date_published))
+    article_list = []
+    for article in articles:
+        title = article.find('h2', class_='entry-title').text.strip()
+        link = article.find('h2', class_='entry-title').find('a')['href']
+        date_published = article.find('time', class_='entry-date').text.strip()
+        article_list.append((title, link, date_published))
 
-    return articles
+    return article_list
 
 # Function to filter articles from the last 7 days
 def filter_last_7_days(articles):
@@ -31,21 +38,9 @@ def filter_last_7_days(articles):
     last_7_days = [today - timedelta(days=i) for i in range(7)]
     filtered_articles = []
 
-    date_patterns = [
-        '%b %d, %Y',  # e.g., 'Jul 10, 2024'
-        '%d %b %Y',   # e.g., '10 Jul 2024'
-    ]
-
     for article in articles:
-        article_date_str = article[3]
-        article_date = None
-        for pattern in date_patterns:
-            try:
-                article_date = datetime.strptime(article_date_str, pattern)
-                break
-            except ValueError:
-                continue
-        if article_date and article_date.date() in [day.date() for day in last_7_days]:
+        article_date = datetime.strptime(article[2], '%B %d, %Y')
+        if article_date.date() in [day.date() for day in last_7_days]:
             filtered_articles.append(article)
 
     return filtered_articles
@@ -54,9 +49,14 @@ def filter_last_7_days(articles):
 def main():
     st.title('Self-Help Dashboard')
 
+    # Fetch motivational quotes
+    quotes = fetch_motivational_quotes()
+    st.header('Motivational Quotes')
+    for quote in quotes[:5]:  # Display top 5 quotes
+        st.write(f"“{quote}”")
+
     # Fetch self-help articles
-    query = "self-help blog"
-    articles = fetch_self_help_articles(query)
+    articles = fetch_self_help_articles()
     
     if not articles:
         st.write("No articles available.")
@@ -69,8 +69,7 @@ def main():
     for article in last_7_days_articles:
         st.write(f"### {article[0]}")
         st.write(f"[Read more]({article[1]})")
-        st.write(f"{article[2]}")
-        st.write(f"Published on: {article[3]}")
+        st.write(f"Published on: {article[2]}")
         st.write("---")
 
 if __name__ == '__main__':
