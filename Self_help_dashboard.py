@@ -2,8 +2,9 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+import re
 
-# Function to fetch self-help articles from the web# Function to fetch self-help articles from Google search results
+# Function to fetch self-help articles from Google search results
 def fetch_self_help_articles(query, num_pages=2):
     articles = []
     headers = {
@@ -30,14 +31,21 @@ def filter_last_7_days(articles):
     last_7_days = [today - timedelta(days=i) for i in range(7)]
     filtered_articles = []
 
+    date_patterns = [
+        '%b %d, %Y',  # e.g., 'Jul 10, 2024'
+        '%d %b %Y',   # e.g., '10 Jul 2024'
+    ]
+
     for article in articles:
         article_date_str = article[3]
-        try:
-            # Parse the date
-            article_date = datetime.strptime(article_date_str, '%b %d, %Y')
-        except ValueError:
-            continue
-        if article_date.date() in [day.date() for day in last_7_days]:
+        article_date = None
+        for pattern in date_patterns:
+            try:
+                article_date = datetime.strptime(article_date_str, pattern)
+                break
+            except ValueError:
+                continue
+        if article_date and article_date.date() in [day.date() for day in last_7_days]:
             filtered_articles.append(article)
 
     return filtered_articles
@@ -47,7 +55,8 @@ def main():
     st.title('Self-Help Dashboard')
 
     # Fetch self-help articles
-    articles = fetch_self_help_articles()
+    query = "self-help blog"
+    articles = fetch_self_help_articles(query)
     
     if not articles:
         st.write("No articles available.")
